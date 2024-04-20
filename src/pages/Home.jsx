@@ -5,40 +5,87 @@ import {
   TextInput,
   TouchableOpacity,
   PermissionsAndroid,
+  Alert,
+  Platform,
 } from 'react-native';
 import RNFetchBlob from 'rn-fetch-blob';
 import React, {useEffect, useState} from 'react';
 import {rw, rh} from '../components/commonFunctions ';
 
 const Home = () => {
-  const [pastedURL, setPastedURL] = useState('');
-
-  const requestFilesPermission = async () => {
+  const [pastedURL, setPastedURL] = useState(
+    'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+  );
+  const requestWriteExternalStoragePermission = async () => {
     try {
       const granted = await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
         {
-          title: 'Cool Photo App storage Permission',
-          message:
-            'FileDownloader App needs access to your Storage ' +
-            'so you can download .',
+          title: 'Storage Permission Required',
+          message: 'This app needs access to write to your external storage.',
           buttonNeutral: 'Ask Me Later',
           buttonNegative: 'Cancel',
           buttonPositive: 'OK',
         },
       );
       if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-        downloadFile();
+        console.log('Write external storage permission granted.');
+        // Perform actions that require storage access
       } else {
-        console.log('storage permission denied');
+        console.log('Write external storage permission denied.');
+        // Handle permission denial (optional)
       }
     } catch (err) {
-      console.warn(err);
+      console.warn('Error requesting permission:', err);
+    }
+  };
+
+  const requestCameraPermission = async () => {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.MANAGE_EXTERNAL_STORAGE,
+        {
+          title: 'Camera Permission',
+          message: 'This app needs permission to manege external storage.',
+          buttonPositive: 'OK',
+          buttonNegative: 'Cancel',
+        },
+      );
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        console.log('Camera permission granted');
+        // You can now proceed with using the camera
+      } else {
+        console.log('Camera permission denied');
+        // Handle the case where permission is denied
+      }
+    } catch (err) {
+      console.warn('Error requesting camera permission:', err);
     }
   };
 
   const downloadFile = () => {
     const {config, fs} = RNFetchBlob;
+    const date = new Date();
+    const fileDir = fs.dirs.DownloadDir;
+
+    config({
+      fileCache: true,
+      addAndroidDownloads: {
+        useDownloadManager: true,
+        notification: true,
+        path:
+          fileDir +
+          '/download_' +
+          Math.floor(date.getDate() + date.getSeconds() / 2) +
+          '.mp4',
+        description: 'file download',
+      },
+    })
+      .fetch('GET', pastedURL, {})
+      .then(res => {
+        console.log('The file saved to ', res.path());
+        Alert('file downloaded successfully');
+      });
   };
 
   return (
@@ -59,7 +106,7 @@ const Home = () => {
           backgroundColor: 'purple',
           borderRadius: 10,
         }}
-        onPress={() => requestFilesPermission()}>
+        onPress={() => requestWriteExternalStoragePermission()}>
         <Text style={{alignSelf: 'center', color: 'white'}}>Download now</Text>
       </TouchableOpacity>
     </View>
